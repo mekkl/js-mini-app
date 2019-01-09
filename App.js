@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Platform, Text, View, StyleSheet, StatusBar, TextInput, Button } from 'react-native';
 import { Constants, Location, Permissions } from 'expo';
 import MapView, { Marker } from 'react-native-maps';
+import {post} from './facade';
 
 export default class App extends Component {
   state = {
@@ -35,40 +36,27 @@ export default class App extends Component {
     this.setState({ location });
   };
 
-  _findFriends = async () => {
-    const username = this.state.username;
-    const password = this.state.password;
-    const radius = this.state.radius;
-    const pos = { lat: this.state.location.coords.latitude, longitude: this.state.location.coords.longitude }
-    const rawResponse = await fetch('localhost:3000/node/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username,
-        password: password,
-        latitude: pos.lat,
-        longitude: pos.lng,
-        radius: radius
-      })
-    });
+  _markFriends = async () => {
+    const friends = await post({
+      username: this.state.username,
+      password: this.state.password,
+      latitude: this.state.location.coords.latitude,
+      longitude: this.state.location.coords.longitude,
+      radius: this.state.radius
+    },'/auth/login')
 
-    const friends = await rawResponse.json().catch(err => {
-      this.setState({errorMessage: err})
-    });
     this.setState({markers: friends})
   }
 
   render() {
     let text = 'Waiting..';
     let markers = []
+    // init region
     let region = {
-      latitude: 37.78825,
-      longitude: -122.4324,
-      latitudeDelta: 0.0,
-      longitudeDelta: 0.0,
+      latitude: 55.6839,
+      longitude: 12.5931,
+      latitudeDelta: 4.0,
+      longitudeDelta: 4.0,
     }
     if (this.state.errorMessage) {
       text = this.state.errorMessage;
@@ -80,11 +68,22 @@ export default class App extends Component {
         title: 'marker1',
         description: 'description'
       })
+      // add friends if any
+      if (this.state.markers.length > 0) {
+        this.state.markers.forEach(marker => {
+          markers.push({
+            latitude: marker.latitude, 
+            longitude: marker.longitude,
+            title: 'title',
+            description: 'description'
+          })
+        })
+      }
       region = {
         latitude: this.state.location.coords.latitude,
         longitude: this.state.location.coords.longitude,
-        latitudeDelta: 0.0322,
-        longitudeDelta: 0.0221,
+        latitudeDelta: 1,
+        longitudeDelta: 1,
       }
     }
 
@@ -92,7 +91,6 @@ export default class App extends Component {
       <View style={{ flex: 1 }}>
         <MapView
           style={{ flex: 0.65 }}
-          initialRegion={region}
           region={region}
         >
           {markers.map(marker => (
@@ -126,7 +124,7 @@ export default class App extends Component {
           />
           <Button 
           title='search' 
-          onPress={this._findFriends} 
+          onPress={this._markFriends} 
           style={{width: 350}}/>
         </View>
 
